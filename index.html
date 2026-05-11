@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Framing Calculator</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #e8e8e8; }
+body {
+  display: flex; align-items: center; justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+
+.calc {
+  width: min(100vw, 430px);
+  height: 100vh; max-height: 920px;
+  background: #e8e8e8;
+  display: flex; flex-direction: column;
+}
+
+/* ── Display ── */
+.display-area {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 16px 22px 10px;
+}
+.expr {
+  font-size: 20px; color: #999; text-align: right;
+  min-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.result-row { display: flex; align-items: baseline; justify-content: flex-end; gap: 10px; }
+.result-val {
+  font-size: 56px; font-weight: 300; color: #111;
+  text-align: right; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: calc(100% - 46px); line-height: 1;
+}
+.result-val.med { font-size: 42px; }
+.result-val.sm  { font-size: 32px; }
+.bksp {
+  font-size: 26px; color: #888; background: none;
+  border: none; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 2px;
+}
+
+/* ── Controls bar ── */
+.controls {
+  display: flex; align-items: center;
+  padding: 4px 16px 10px; gap: 8px;
+}
+.btn-clr {
+  font-size: 22px; color: #bbb; background: none;
+  border: none; cursor: pointer; padding: 4px 6px; flex-shrink: 0;
+}
+.presets { display: flex; gap: 8px; flex: 1; }
+.btn-pre {
+  flex: 1; padding: 7px 4px; border-radius: 20px;
+  border: 1.5px solid #ccc; background: transparent;
+  font-size: 14px; font-weight: 600; color: #555; cursor: pointer;
+}
+.btn-pre:active { background: #ddd; }
+.modes { display: flex; gap: 8px; }
+.btn-mode {
+  padding: 7px 18px; border-radius: 20px;
+  border: 1.5px solid #ccc; background: transparent;
+  font-size: 15px; font-weight: 600; color: #555; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-mode.active { background: #111; border-color: #111; color: #fff; }
+
+/* ── Keypad ── */
+.keypad { padding: 4px 12px 24px; display: flex; flex-direction: column; gap: 8px; }
+
+/* FT unit/slash row — 3 equal columns */
+.ft-unit-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.key-ftunit {
+  height: 52px; border: none; border-radius: 14px;
+  background: #c8dff5; color: #1458a0;
+  font-size: 22px; font-weight: 700; cursor: pointer;
+}
+.key-ftunit:active { filter: brightness(0.88); }
+
+.stage-hint {
+  text-align: center; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.8px; color: #aaa; text-transform: uppercase;
+  min-height: 14px;
+}
+
+.num-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.last-row  { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+
+.key {
+  height: 70px; border: none; border-radius: 35px;
+  font-size: 28px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.key:active { filter: brightness(0.85); }
+.key-n { background: #d4d4d2; color: #000; }
+.key-o { background: #ff9f0a; color: #fff; }
+.key-zero { justify-content: flex-start; padding-left: 26px; font-size: 28px; }
+.key-eq   { width: 100%; border-radius: 35px; font-size: 32px; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="calc">
+
+  <div class="display-area">
+    <div class="expr" id="expr"></div>
+    <div class="result-row">
+      <div class="result-val" id="display">0</div>
+      <button class="bksp" onclick="doBack()">⌫</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-clr" onclick="doClear()">✕</button>
+    <div class="presets" id="pre-ft">
+      <button class="btn-pre" onclick="doPresetFT(96)">8'</button>
+      <button class="btn-pre" onclick="doPresetFT(192)">16'</button>
+    </div>
+    <div class="presets hidden" id="pre-dec">
+      <button class="btn-pre" onclick="doPresetDec(0.5)">0.5</button>
+      <button class="btn-pre" onclick="doPresetDec(0.25)">0.25</button>
+    </div>
+    <div class="modes">
+      <button class="btn-mode active" id="tab-ft"  onclick="setMode('FT')">FT</button>
+      <button class="btn-mode"        id="tab-dec" onclick="setMode('DEC')">DEC</button>
+    </div>
+  </div>
+
+  <div class="keypad">
+
+    <!-- FT special keys: feet, inches, fraction slash -->
+    <div id="ft-keys">
+      <div class="ft-unit-row">
+        <button class="key-ftunit" onclick="doFeet()">'</button>
+        <button class="key-ftunit" onclick="doInch()">"</button>
+        <button class="key-ftunit" onclick="doSlash()">/</button>
+      </div>
+      <div class="stage-hint" id="stage-hint">ENTER FEET</div>
+    </div>
+
+    <div class="num-grid">
+      <button class="key key-n" onclick="digit(7)">7</button>
+      <button class="key key-n" onclick="digit(8)">8</button>
+      <button class="key key-n" onclick="digit(9)">9</button>
+      <button class="key key-o" onclick="doOp('÷')">÷</button>
+    </div>
+    <div class="num-grid">
+      <button class="key key-n" onclick="digit(4)">4</button>
+      <button class="key key-n" onclick="digit(5)">5</button>
+      <button class="key key-n" onclick="digit(6)">6</button>
+      <button class="key key-o" onclick="doOp('×')">×</button>
+    </div>
+    <div class="num-grid">
+      <button class="key key-n" onclick="digit(1)">1</button>
+      <button class="key key-n" onclick="digit(2)">2</button>
+      <button class="key key-n" onclick="digit(3)">3</button>
+      <button class="key key-o" onclick="doOp('−')">−</button>
+    </div>
+    <div class="last-row">
+      <button class="key key-n key-zero" onclick="digit(0)">0</button>
+      <button class="key key-n" onclick="doDot()">.</button>
+      <button class="key key-o" onclick="doOp('+')">+</button>
+    </div>
+    <button class="key key-o key-eq" onclick="doEquals()">=</button>
+
+  </div>
+</div>
+
+<script>
+/* ─── state ─────────────────────────────────────────────────
+   FT mode stages:
+     'feet'     → typing whole feet (before ')
+     'inches'   → typing whole inches (after ')
+     'fracNum'  → typing fraction numerator (after / in inches stage)
+     'fracDenom'→ typing fraction denominator (after / in fracNum stage,
+                  OR immediately after / in feet stage when no ' was pressed)
+   ──────────────────────────────────────────────────────── */
+const S = {
+  mode: 'FT',
+  prev: null, pendingOp: null, result: 0, justEq: false,
+  // FT input parts
+  ftFeet: '',       ftFeetDone: false,
+  ftInch: '',       ftInchDone: false,
+  ftFracNum: '',    ftFracDenom: '',
+  ftStage: 'feet',
+  // DEC
+  decStr: '',
+};
+
+/* ─── math helpers ─────────────────────────────────────── */
+function gcd(a, b) {
+  a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b));
+  while (b) { let t = b; b = a % b; a = t; }
+  return a || 1;
+}
+
+// Format decimal inches → e.g. "10' 6 7/32"" or "3/8"" or "6""
+// Suppresses leading 0' and leading "0 " when not needed
+function fmtFT(inches) {
+  if (!isFinite(inches)) return 'Error';
+  const neg = inches < 0; if (neg) inches = -inches;
+  // Default 1/32 precision. If result would round to 0 but is positive,
+  // step down to finer power-of-2 denominators (1/64, 1/128 … 1/1024).
+  let denom = 32;
+  let ts = Math.round(inches * denom);
+  if (ts === 0 && inches > 0) {
+    while (denom < 1024) {
+      denom *= 2;
+      ts = Math.round(inches * denom);
+      // accept only when the value is (essentially) exact at this denominator
+      if (ts > 0 && Math.abs(inches * denom - ts) < 1e-6) break;
+    }
+    if (ts === 0) return '< 1/1024"'; // truly negligible
+  }
+  inches = ts / denom;
+  let ft = Math.floor(inches / 12);
+  const rem = inches - ft * 12;
+  let wi = Math.floor(rem);
+  let fts = Math.round((rem - wi) * denom);
+  // Guard against floating-point overflow
+  if (fts >= denom) { fts = 0; wi += 1; }
+  if (wi >= 12)     { wi = 0; ft += 1; }
+  let out = neg ? '−' : '';
+  if (ft > 0) out += ft + "'";
+  if (wi > 0 && fts > 0) {
+    if (ft > 0) out += ' ';
+    const g = gcd(fts, denom);
+    out += wi + ' ' + (fts/g) + '/' + (denom/g) + '"';
+  } else if (wi > 0) {
+    if (ft > 0) out += ' ';
+    out += wi + '"';
+  } else if (fts > 0) {
+    if (ft > 0) out += ' ';
+    const g = gcd(fts, denom);
+    out += (fts/g) + '/' + (denom/g) + '"';
+  } else if (ft === 0) {
+    out += '0"';
+  }
+  return out;
+}
+
+function fmtDec(v) {
+  if (!isFinite(v)) return 'Error';
+  return parseFloat(v.toPrecision(10)).toString();
+}
+
+function currentVal() {
+  if (S.mode === 'FT') {
+    const feet = S.ftFeetDone ? (parseFloat(S.ftFeet) || 0) * 12 : 0;
+    const inch = parseFloat(S.ftInch) || 0;
+    // Bare digits typed without any unit key (no ' " or /) → treat as plain number (inches/scalar)
+    const bare = (!S.ftFeetDone && S.ftFracNum === '' && S.ftFracDenom === '')
+                 ? (parseFloat(S.ftFeet) || 0) : 0;
+    const num  = parseFloat(S.ftFracNum) || 0;
+    const den  = parseFloat(S.ftFracDenom) || 1;
+    const frac = (S.ftFracNum !== '' && S.ftFracDenom !== '') ? num / den : 0;
+    return feet + inch + bare + frac;
+  }
+  return parseFloat(S.decStr) || 0;
+}
+
+/* ─── display builder ──────────────────────────────────── */
+function buildFTStr() {
+  if (S.justEq) return fmtFT(S.result);
+  const stage = S.ftStage;
+
+  // Still typing feet — just show the raw number
+  if (stage === 'feet') return S.ftFeet || '0';
+
+  // Build feet prefix (only when ' was pressed)
+  let out = S.ftFeetDone ? (S.ftFeet || '0') + "'" : '';
+
+  if (stage === 'inches') {
+    if (S.ftInch) { if (out) out += ' '; out += S.ftInch; }
+    return out || '0';
+  }
+
+  // fracNum or fracDenom stage
+  // Inches part (without closing " — fraction may follow)
+  const inchPart = S.ftInch || (S.ftInchDone ? '0' : null);
+
+  // Fraction string
+  let fracStr = '';
+  if (stage === 'fracNum') {
+    // Show numerator with trailing / to signal "type denominator next"
+    fracStr = S.ftFracNum ? S.ftFracNum + '/' : '';
+  } else { // fracDenom
+    const d = S.ftFracDenom;
+    fracStr = (S.ftFracNum || '0') + '/' + (d ? d + '"' : '');
+  }
+
+  if (inchPart !== null && fracStr) {
+    if (out) out += ' ';
+    out += inchPart + ' ' + fracStr;
+  } else if (inchPart !== null) {
+    if (out) out += ' ';
+    out += inchPart + '"';
+  } else if (fracStr) {
+    if (out) out += ' ';
+    out += fracStr;
+  }
+
+  return out || '0';
+}
+
+function render() {
+  const dEl = document.getElementById('display');
+  const eEl = document.getElementById('expr');
+  const hEl = document.getElementById('stage-hint');
+  const val = S.mode === 'FT' ? buildFTStr() : (S.justEq ? fmtDec(S.result) : (S.decStr || '0'));
+  dEl.className = 'result-val' + (val.length > 14 ? ' sm' : val.length > 9 ? ' med' : '');
+  dEl.textContent = val;
+  eEl.textContent = S.pendingOp
+    ? (S.mode === 'FT' ? fmtFT(S.prev) : fmtDec(S.prev)) + ' ' + S.pendingOp
+    : '';
+  if (!hEl) return;
+  if (S.mode !== 'FT') { hEl.textContent = ''; return; }
+  if (S.justEq) { hEl.textContent = 'RESULT'; return; }
+  const hints = {
+    feet:      'ENTER FEET  →  press  \'',
+    inches:    'ENTER INCHES  →  press  "  or  /',
+    fracNum:   'ENTER NUMERATOR  →  press  /',
+    fracDenom: 'ENTER DENOMINATOR',
+  };
+  hEl.textContent = hints[S.ftStage] || '';
+}
+
+/* ─── input actions ────────────────────────────────────── */
+function resetFT() {
+  S.ftFeet = ''; S.ftFeetDone = false;
+  S.ftInch = ''; S.ftInchDone = false;
+  S.ftFracNum = ''; S.ftFracDenom = '';
+  S.ftStage = 'feet';
+}
+
+function freshStart() { if (S.justEq) { S.justEq = false; resetFT(); S.decStr = ''; } }
+
+function setMode(m) {
+  S.mode = m; S.prev = null; S.pendingOp = null; S.justEq = false; S.result = 0;
+  resetFT(); S.decStr = '';
+  document.getElementById('tab-ft').classList.toggle('active', m === 'FT');
+  document.getElementById('tab-dec').classList.toggle('active', m === 'DEC');
+  document.getElementById('ft-keys').classList.toggle('hidden', m !== 'FT');
+  document.getElementById('pre-ft').classList.toggle('hidden', m !== 'FT');
+  document.getElementById('pre-dec').classList.toggle('hidden', m === 'FT');
+  render();
+}
+
+function digit(n) {
+  freshStart();
+  if (S.mode === 'FT') {
+    if      (S.ftStage === 'feet')      { S.ftFeet += n; }
+    else if (S.ftStage === 'inches')    { if (parseFloat(S.ftInch + n) <= 11) S.ftInch += n; }
+    else if (S.ftStage === 'fracNum')   { S.ftFracNum += n; }
+    else if (S.ftStage === 'fracDenom') { S.ftFracDenom += n; }
+  } else { S.decStr += n; }
+  render();
+}
+
+function doDot() {
+  freshStart();
+  if (S.mode === 'FT') {
+    if (S.ftStage === 'feet' && !S.ftFeet.includes('.'))
+      S.ftFeet = (S.ftFeet || '0') + '.';
+    else if (S.ftStage === 'inches' && !S.ftInch.includes('.'))
+      S.ftInch = (S.ftInch || '0') + '.';
+  } else {
+    if (!S.decStr.includes('.')) S.decStr = (S.decStr || '0') + '.';
+  }
+  render();
+}
+
+// ' key — confirm feet, move to inches
+function doFeet() {
+  freshStart();
+  if (S.ftStage === 'feet') { S.ftFeetDone = true; S.ftStage = 'inches'; }
+  render();
+}
+
+// " key — confirm inches (or treat current digits as inches), move to fracNum
+function doInch() {
+  freshStart();
+  if (S.ftStage === 'feet') {
+    // no ' was pressed — treat what's typed as inches
+    S.ftInch = S.ftFeet; S.ftFeet = ''; S.ftFeetDone = false;
+    S.ftInchDone = true; S.ftStage = 'fracNum';
+  } else if (S.ftStage === 'inches') {
+    S.ftInchDone = true; S.ftStage = 'fracNum';
+  }
+  render();
+}
+
+// / key — fraction separator
+// In 'feet' stage:   current digits → fracNum, jump to fracDenom (no feet/inches)
+// In 'inches' stage: lock whole inches → move to fracNum
+// In 'fracNum' stage: lock fracNum    → move to fracDenom
+function doSlash() {
+  freshStart();
+  if (S.mode !== 'FT') return; // ignored in DEC (use ÷ for division)
+  if (S.ftStage === 'feet') {
+    // digits typed so far are the fraction numerator, not feet
+    S.ftFracNum = S.ftFeet; S.ftFeet = ''; S.ftFeetDone = false;
+    S.ftInchDone = false;
+    S.ftStage = 'fracDenom';
+  } else if (S.ftStage === 'inches') {
+    S.ftInchDone = true; S.ftStage = 'fracNum';
+  } else if (S.ftStage === 'fracNum') {
+    S.ftStage = 'fracDenom';
+  }
+  render();
+}
+
+function doPresetFT(inches) {
+  freshStart();
+  const ft = Math.floor(inches / 12);
+  S.ftFeet = ft.toString(); S.ftFeetDone = true;
+  S.ftInch = '0'; S.ftInchDone = true;
+  S.ftFracNum = ''; S.ftFracDenom = '';
+  S.ftStage = 'fracNum';
+  render();
+}
+
+function doPresetDec(v) { freshStart(); S.decStr = v.toString(); render(); }
+
+function compute(a, b, op) {
+  if (op === '+') return a + b;
+  if (op === '−') return a - b;
+  if (op === '×') return a * b;
+  if (op === '÷') return b !== 0 ? a / b : Infinity;
+  return b;
+}
+
+function doOp(op) {
+  const cv = currentVal();
+  if (S.pendingOp !== null && !S.justEq)
+    S.prev = compute(S.prev, cv, S.pendingOp);
+  else
+    S.prev = S.justEq ? S.result : cv;
+  S.pendingOp = op; S.justEq = false;
+  resetFT(); S.decStr = '';
+  render();
+}
+
+function doEquals() {
+  if (S.pendingOp === null) return;
+  S.result = compute(S.prev, currentVal(), S.pendingOp);
+  S.prev = null; S.pendingOp = null; S.justEq = true;
+  resetFT(); S.decStr = fmtDec(S.result);
+  render();
+}
+
+function doClear() {
+  S.prev = null; S.pendingOp = null; S.justEq = false; S.result = 0;
+  resetFT(); S.decStr = '';
+  render();
+}
+
+function doBack() {
+  if (S.justEq) { doClear(); return; }
+  if (S.mode === 'FT') {
+    if (S.ftStage === 'fracDenom') {
+      if (S.ftFracDenom.length > 0) { S.ftFracDenom = S.ftFracDenom.slice(0,-1); }
+      else {
+        // Go back — if we came from 'feet' (no ' pressed), restore fracNum to feet
+        if (!S.ftFeetDone && !S.ftInchDone) {
+          S.ftFeet = S.ftFracNum; S.ftFracNum = ''; S.ftStage = 'feet';
+        } else {
+          S.ftStage = 'fracNum';
+        }
+      }
+    } else if (S.ftStage === 'fracNum') {
+      if (S.ftFracNum.length > 0) { S.ftFracNum = S.ftFracNum.slice(0,-1); }
+      else { S.ftInchDone = false; S.ftStage = 'inches'; }
+    } else if (S.ftStage === 'inches') {
+      if (S.ftInch.length > 0) { S.ftInch = S.ftInch.slice(0,-1); }
+      else { S.ftFeetDone = false; S.ftStage = 'feet'; }
+    } else if (S.ftStage === 'feet') {
+      if (S.ftFeet.length > 0) S.ftFeet = S.ftFeet.slice(0,-1);
+    }
+  } else {
+    S.decStr = S.decStr.slice(0,-1);
+  }
+  render();
+}
+
+/* ─── init ──────────────────────────────────────────────── */
+setMode('FT');
+</script>
+</body>
+</html>
