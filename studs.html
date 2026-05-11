@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wall Stud Calculator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f1f3f5;
+  color: #222;
+  line-height: 1.5;
+  padding-bottom: 40px;
+  -webkit-tap-highlight-color: transparent;
+}
+.container { max-width: 760px; margin: 0 auto; padding: 0 14px; }
+
+header {
+  background: #2c3e50;
+  color: #fff;
+  padding: 22px 16px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+header .sub { font-size: 13px; opacity: 0.8; }
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.card h2 {
+  font-size: 16px;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #f1f3f5;
+  padding-bottom: 8px;
+  font-weight: 700;
+}
+
+.row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.row > div { flex: 1; min-width: 110px; }
+.row:last-child { margin-bottom: 0; }
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+input[type=number], select {
+  width: 100%;
+  padding: 10px 11px;
+  font-size: 16px;
+  border: 1.5px solid #dde2e6;
+  border-radius: 7px;
+  background: #fff;
+  color: #222;
+  appearance: none;
+  -webkit-appearance: none;
+}
+input:focus, select:focus { border-color: #ff9f0a; outline: none; }
+select { background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+.opening-row {
+  background: #fafbfc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #e7eaed;
+}
+.opening-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.opening-header span {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+.btn {
+  border: none;
+  border-radius: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 11px 18px;
+  transition: filter 0.1s;
+}
+.btn:active { filter: brightness(0.9); }
+.btn-add { background: #34495e; color: #fff; width: 100%; }
+.btn-remove { background: #c0392b; color: #fff; padding: 6px 12px; font-size: 13px; }
+.btn-calc { background: #27ae60; color: #fff; width: 100%; padding: 16px; font-size: 17px; margin-top: 4px; }
+.btn-reset { background: #95a5a6; color: #fff; width: 100%; margin-top: 8px; }
+
+.results-card { background: #2c3e50; color: #fff; }
+.results-card h2 { color: #fff; border-color: #34495e; }
+.section { margin-bottom: 14px; }
+.section h3 {
+  font-size: 12px;
+  color: #ff9f0a;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.line { display: flex; justify-content: space-between; padding: 4px 0; font-size: 15px; }
+.line .v { font-weight: 700; }
+.total-line { border-top: 1px solid #34495e; padding-top: 8px; margin-top: 4px; font-size: 17px; }
+
+.shopping {
+  background: #ff9f0a;
+  color: #2c3e50;
+  border-radius: 9px;
+  padding: 14px;
+  margin-top: 12px;
+}
+.shopping h3 { color: #2c3e50; }
+.shopping ul { list-style: none; }
+.shopping li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+  font-size: 15px;
+}
+.shopping li:last-child { border-bottom: none; }
+.shopping strong { font-weight: 700; }
+
+.note, .disclaimer {
+  border-radius: 7px;
+  padding: 11px 13px;
+  font-size: 13px;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+.note { background: #fff3cd; color: #856404; border-left: 3px solid #ffc107; }
+.disclaimer { background: #f8d7da; color: #721c24; border-left: 3px solid #dc3545; }
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 13px;
+  text-decoration: none;
+}
+.back-link:hover { color: #2c3e50; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔨 Wall Stud Calculator</h1>
+  <div class="sub">Quick framing material estimator</div>
+</header>
+
+<div class="container">
+
+  <!-- 1. Wall Info -->
+  <div class="card">
+    <h2>1. Wall Info</h2>
+    <div class="row">
+      <div>
+        <label>Wall length (ft)</label>
+        <input type="number" id="wallFt" value="12" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>+ inches</label>
+        <input type="number" id="wallIn" value="0" min="0" max="11" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Wall height</label>
+        <select id="wallHeight">
+          <option value="8">8 ft</option>
+          <option value="9">9 ft</option>
+          <option value="10">10 ft</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div id="customHeightDiv" style="display:none">
+        <label>Custom (ft)</label>
+        <input type="number" id="customHeight" value="8" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Stud size</label>
+        <select id="studSize">
+          <option value="2x4">2x4</option>
+          <option value="2x6">2x6</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Stud spacing (O.C.)</label>
+        <select id="studSpacing">
+          <option value="12">12"</option>
+          <option value="16" selected>16"</option>
+          <option value="24">24"</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div id="customSpacingDiv" style="display:none">
+        <label>Custom (in)</label>
+        <input type="number" id="customSpacing" value="16" min="1" inputmode="numeric">
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Corners -->
+  <div class="card">
+    <h2>2. Corners & Intersections</h2>
+    <div class="row">
+      <div>
+        <label>Outside corners</label>
+        <input type="number" id="outsideCorners" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Extra studs each</label>
+        <input type="number" id="outsideCornerExtra" value="2" min="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Inside corners</label>
+        <input type="number" id="insideCorners" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Extra studs each</label>
+        <input type="number" id="insideCornerExtra" value="1" min="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>T-intersections</label>
+        <input type="number" id="tIntersections" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Extra studs each</label>
+        <input type="number" id="tIntersectionExtra" value="2" min="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Reinforced wall ends</label>
+        <input type="number" id="reinforcedEnds" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Extra studs each</label>
+        <input type="number" id="reinforcedEndExtra" value="1" min="0" inputmode="numeric">
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Doors -->
+  <div class="card">
+    <h2>3. Doors</h2>
+    <div id="doorsList"></div>
+    <button class="btn btn-add" onclick="addDoor()">+ Add Door</button>
+  </div>
+
+  <!-- 4. Windows -->
+  <div class="card">
+    <h2>4. Windows</h2>
+    <div id="windowsList"></div>
+    <button class="btn btn-add" onclick="addWindow()">+ Add Window</button>
+  </div>
+
+  <!-- 5. Blocking -->
+  <div class="card">
+    <h2>5. Blocking / Backing (linear feet)</h2>
+    <div class="row">
+      <div>
+        <label>Cabinet backing</label>
+        <input type="number" id="cabinetLF" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>TV backing</label>
+        <input type="number" id="tvLF" value="0" min="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Handrail backing</label>
+        <input type="number" id="handrailLF" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Bath accessory</label>
+        <input type="number" id="bathLF" value="0" min="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Fire blocking</label>
+        <input type="number" id="fireLF" value="0" min="0" inputmode="numeric">
+      </div>
+      <div>
+        <label>Other backing</label>
+        <input type="number" id="otherLF" value="0" min="0" inputmode="numeric">
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Waste & Lumber -->
+  <div class="card">
+    <h2>6. Waste & Lumber Options</h2>
+    <div class="row">
+      <div>
+        <label>Waste %</label>
+        <select id="wastePct">
+          <option value="5">5%</option>
+          <option value="10" selected>10%</option>
+          <option value="15">15%</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div id="customWasteDiv" style="display:none">
+        <label>Custom %</label>
+        <input type="number" id="customWaste" value="10" min="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Plate board length</label>
+        <select id="plateBoardLen">
+          <option value="8">8 ft</option>
+          <option value="10">10 ft</option>
+          <option value="12" selected>12 ft</option>
+          <option value="16">16 ft</option>
+        </select>
+      </div>
+      <div>
+        <label>Blocking board length</label>
+        <select id="blockingBoardLen">
+          <option value="8" selected>8 ft</option>
+          <option value="10">10 ft</option>
+          <option value="12">12 ft</option>
+          <option value="16">16 ft</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-calc" onclick="calculate()">Calculate Materials</button>
+  <button class="btn btn-reset" onclick="resetAll()">Reset</button>
+
+  <!-- Results -->
+  <div class="card results-card" id="results" style="display:none">
+    <h2>📋 Results</h2>
+    <div id="resultsContent"></div>
+  </div>
+
+  <div class="disclaimer">
+    ⚠️ This calculator gives a rough material estimate only. Always verify framing layout, load-bearing requirements, fire blocking, opening headers, and local building code before building.
+  </div>
+</div>
+
+<script>
+/* ── Dynamic openings ─────────────────────────────── */
+let doorCounter = 0;
+let windowCounter = 0;
+
+function addDoor() {
+  const id = ++doorCounter;
+  const html = `
+    <div class="opening-row" data-id="${id}">
+      <div class="opening-header">
+        <span class="opening-label">Door</span>
+        <button class="btn btn-remove" onclick="removeOpening(this)">Remove</button>
+      </div>
+      <div class="row">
+        <div><label>Width (in)</label>
+          <input type="number" class="d-width" value="32" min="0" inputmode="numeric"></div>
+        <div><label>Height (in)</label>
+          <input type="number" class="d-height" value="80" min="0" inputmode="numeric"></div>
+      </div>
+      <div class="row">
+        <div><label>Kings / side</label>
+          <input type="number" class="d-king" value="1" min="0" inputmode="numeric"></div>
+        <div><label>Jacks / side</label>
+          <input type="number" class="d-jack" value="1" min="0" inputmode="numeric"></div>
+        <div><label>Cripples (auto)</label>
+          <input type="number" class="d-cripple" placeholder="auto" min="0" inputmode="numeric"></div>
+      </div>
+    </div>`;
+  document.getElementById('doorsList').insertAdjacentHTML('beforeend', html);
+  renumber('doorsList', 'Door');
+}
+
+function addWindow() {
+  const id = ++windowCounter;
+  const html = `
+    <div class="opening-row" data-id="${id}">
+      <div class="opening-header">
+        <span class="opening-label">Window</span>
+        <button class="btn btn-remove" onclick="removeOpening(this)">Remove</button>
+      </div>
+      <div class="row">
+        <div><label>Width (in)</label>
+          <input type="number" class="w-width" value="36" min="0" inputmode="numeric"></div>
+        <div><label>Height (in)</label>
+          <input type="number" class="w-height" value="48" min="0" inputmode="numeric"></div>
+      </div>
+      <div class="row">
+        <div><label>Kings / side</label>
+          <input type="number" class="w-king" value="1" min="0" inputmode="numeric"></div>
+        <div><label>Jacks / side</label>
+          <input type="number" class="w-jack" value="1" min="0" inputmode="numeric"></div>
+      </div>
+      <div class="row">
+        <div><label>Cripples above (auto)</label>
+          <input type="number" class="w-crip-above" placeholder="auto" min="0" inputmode="numeric"></div>
+        <div><label>Cripples below (auto)</label>
+          <input type="number" class="w-crip-below" placeholder="auto" min="0" inputmode="numeric"></div>
+      </div>
+    </div>`;
+  document.getElementById('windowsList').insertAdjacentHTML('beforeend', html);
+  renumber('windowsList', 'Window');
+}
+
+function removeOpening(btn) {
+  const row = btn.closest('.opening-row');
+  const listId = row.parentElement.id;
+  row.remove();
+  renumber(listId, listId === 'doorsList' ? 'Door' : 'Window');
+}
+
+function renumber(listId, label) {
+  const rows = document.querySelectorAll('#' + listId + ' .opening-row');
+  rows.forEach((r, i) => {
+    r.querySelector('.opening-label').textContent = `${label} ${i + 1}`;
+  });
+}
+
+/* ── Helpers ──────────────────────────────────────── */
+function num(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function intVal(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+function getSpacing() {
+  const sel = document.getElementById('studSpacing').value;
+  if (sel === 'custom') return num('customSpacing') || 16;
+  return parseFloat(sel);
+}
+function getWaste() {
+  const sel = document.getElementById('wastePct').value;
+  if (sel === 'custom') return num('customWaste');
+  return parseFloat(sel);
+}
+function getWallHeight() {
+  const sel = document.getElementById('wallHeight').value;
+  if (sel === 'custom') return num('customHeight') || 8;
+  return parseFloat(sel);
+}
+
+/* Show/hide custom inputs */
+document.getElementById('studSpacing').addEventListener('change', e => {
+  document.getElementById('customSpacingDiv').style.display = e.target.value === 'custom' ? '' : 'none';
+});
+document.getElementById('wastePct').addEventListener('change', e => {
+  document.getElementById('customWasteDiv').style.display = e.target.value === 'custom' ? '' : 'none';
+});
+document.getElementById('wallHeight').addEventListener('change', e => {
+  document.getElementById('customHeightDiv').style.display = e.target.value === 'custom' ? '' : 'none';
+});
+
+/* ── Calculation ──────────────────────────────────── */
+function calculate() {
+  const wallFt = num('wallFt');
+  const wallIn = num('wallIn');
+  const wallLenIn = wallFt * 12 + wallIn;
+  const wallLenFt = wallLenIn / 12;
+  const spacing = getSpacing();
+  const studSize = document.getElementById('studSize').value;
+  const wallHeight = getWallHeight();
+
+  if (wallLenIn <= 0) { alert('Wall length must be greater than 0'); return; }
+  if (spacing <= 0)   { alert('Stud spacing must be greater than 0'); return; }
+
+  // Regular layout studs
+  const regularStuds = Math.floor(wallLenIn / spacing) + 1;
+
+  // Corner & intersection studs
+  const cornerStuds =
+      intVal('outsideCorners')  * intVal('outsideCornerExtra')
+    + intVal('insideCorners')   * intVal('insideCornerExtra')
+    + intVal('tIntersections')  * intVal('tIntersectionExtra')
+    + intVal('reinforcedEnds')  * intVal('reinforcedEndExtra');
+
+  // Doors
+  let doorCount = 0, doorKing = 0, doorJack = 0, doorCripple = 0;
+  document.querySelectorAll('#doorsList .opening-row').forEach(row => {
+    doorCount++;
+    const w = parseFloat(row.querySelector('.d-width').value) || 0;
+    const k = parseInt(row.querySelector('.d-king').value) || 1;
+    const j = parseInt(row.querySelector('.d-jack').value) || 1;
+    const overrideC = row.querySelector('.d-cripple').value;
+    doorKing += k * 2;
+    doorJack += j * 2;
+    doorCripple += (overrideC !== '')
+      ? (parseInt(overrideC) || 0)
+      : Math.max(0, Math.floor(w / spacing) + 1);
+  });
+
+  // Windows
+  let winCount = 0, winKing = 0, winJack = 0, winCripAbove = 0, winCripBelow = 0;
+  document.querySelectorAll('#windowsList .opening-row').forEach(row => {
+    winCount++;
+    const w = parseFloat(row.querySelector('.w-width').value) || 0;
+    const k = parseInt(row.querySelector('.w-king').value) || 1;
+    const j = parseInt(row.querySelector('.w-jack').value) || 1;
+    const overrideA = row.querySelector('.w-crip-above').value;
+    const overrideB = row.querySelector('.w-crip-below').value;
+    winKing += k * 2;
+    winJack += j * 2;
+    winCripAbove += (overrideA !== '')
+      ? (parseInt(overrideA) || 0)
+      : Math.max(0, Math.floor(w / spacing) + 1);
+    winCripBelow += (overrideB !== '')
+      ? (parseInt(overrideB) || 0)
+      : Math.max(0, Math.floor(w / spacing) + 1);
+  });
+
+  // Blocking
+  const totalBlockingLF = num('cabinetLF') + num('tvLF') + num('handrailLF')
+                        + num('bathLF') + num('fireLF') + num('otherLF');
+  const blockingBoardLen = parseFloat(document.getElementById('blockingBoardLen').value);
+  const blockingBoards = totalBlockingLF > 0
+    ? Math.ceil(totalBlockingLF / blockingBoardLen)
+    : 0;
+
+  // Plates
+  const plateLF = wallLenFt * 3;
+  const plateBoardLen = parseFloat(document.getElementById('plateBoardLen').value);
+  const plateBoards = Math.ceil(plateLF / plateBoardLen);
+
+  // Waste + totals
+  const wastePct = getWaste();
+  const subtotalStuds = regularStuds + cornerStuds
+                      + doorKing + doorJack + doorCripple
+                      + winKing + winJack + winCripAbove + winCripBelow;
+  const wasteStuds = Math.ceil(subtotalStuds * wastePct / 100);
+  const finalStuds = subtotalStuds + wasteStuds;
+
+  renderResults({
+    wallFt, wallIn, wallHeight, studSize, spacing,
+    regularStuds, cornerStuds,
+    doorCount, doorKing, doorJack, doorCripple,
+    winCount, winKing, winJack, winCripAbove, winCripBelow,
+    totalBlockingLF, blockingBoards, blockingBoardLen,
+    plateLF, plateBoards, plateBoardLen,
+    wastePct, subtotalStuds, wasteStuds, finalStuds,
+  });
+}
+
+/* ── Render ──────────────────────────────────────── */
+function renderResults(r) {
+  const lines = (rows) => rows.map(
+    ([l, v]) => `<div class="line"><span>${l}</span><span class="v">${v}</span></div>`
+  ).join('');
+
+  const html = `
+    <div class="section">
+      <h3>Basic Wall Info</h3>
+      ${lines([
+        ['Wall length', `${r.wallFt} ft ${r.wallIn} in`],
+        ['Wall height', `${r.wallHeight} ft`],
+        ['Stud size', r.studSize],
+        ['Stud spacing', `${r.spacing}" O.C.`],
+      ])}
+    </div>
+
+    <div class="section">
+      <h3>Regular Studs</h3>
+      ${lines([['Layout studs', r.regularStuds]])}
+    </div>
+
+    <div class="section">
+      <h3>Extra Framing Studs</h3>
+      ${lines([
+        ['Corner / intersection', r.cornerStuds],
+        ['Door king studs', r.doorKing],
+        ['Door jack / trimmer', r.doorJack],
+        ['Door cripples (above)', r.doorCripple],
+        ['Window king studs', r.winKing],
+        ['Window jack / trimmer', r.winJack],
+        ['Window cripples (above)', r.winCripAbove],
+        ['Window cripples (below)', r.winCripBelow],
+      ])}
+    </div>
+
+    <div class="section">
+      <h3>Blocking / Backing</h3>
+      ${lines([
+        ['Total backing', `${r.totalBlockingLF} LF`],
+        ['Boards needed', r.blockingBoards > 0
+          ? `${r.blockingBoards} pcs of ${r.studSize}x${r.blockingBoardLen}`
+          : '0'],
+      ])}
+    </div>
+
+    <div class="section">
+      <h3>Plates</h3>
+      ${lines([
+        ['Bottom plate', `${(r.plateLF/3).toFixed(1)} LF`],
+        ['Top plate', `${(r.plateLF/3).toFixed(1)} LF`],
+        ['Double top plate', `${(r.plateLF/3).toFixed(1)} LF`],
+        ['Total plate', `${r.plateLF.toFixed(1)} LF`],
+        ['Plate boards', `${r.plateBoards} pcs of ${r.studSize}x${r.plateBoardLen}`],
+      ])}
+    </div>
+
+    <div class="section">
+      <h3>Waste</h3>
+      ${lines([
+        ['Waste %', `${r.wastePct}%`],
+        ['Subtotal studs', r.subtotalStuds],
+        ['Waste added', `+${r.wasteStuds}`],
+      ])}
+      <div class="line total-line"><span>Final stud count</span><span class="v">${r.finalStuds}</span></div>
+    </div>
+
+    <div class="shopping">
+      <h3>🛒 Shopping List</h3>
+      <ul>
+        <li>Framing studs (${r.studSize}): <strong>${r.finalStuds} pcs</strong></li>
+        <li>Plate material (${r.studSize}x${r.plateBoardLen}): <strong>${r.plateBoards} pcs</strong></li>
+        ${r.blockingBoards > 0 ? `<li>Blocking / backing (${r.studSize}x${r.blockingBoardLen}): <strong>${r.blockingBoards} pcs</strong></li>` : ''}
+        <li>Header material: <strong>verify manually</strong></li>
+        <li>Waste included: <strong>Yes (${r.wastePct}%)</strong></li>
+      </ul>
+    </div>
+
+    <div class="note">
+      📝 This is a material estimate. Actual framing layout may change depending on opening position, building code, load requirements, and site conditions. Header size depends on load, span, and code — verify with drawings or a qualified person.
+    </div>
+  `;
+
+  document.getElementById('resultsContent').innerHTML = html;
+  const el = document.getElementById('results');
+  el.style.display = '';
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── Reset ───────────────────────────────────────── */
+function resetAll() {
+  if (!confirm('Reset all inputs to defaults?')) return;
+  document.getElementById('wallFt').value = 12;
+  document.getElementById('wallIn').value = 0;
+  document.getElementById('wallHeight').value = '8';
+  document.getElementById('customHeight').value = 8;
+  document.getElementById('studSize').value = '2x4';
+  document.getElementById('studSpacing').value = '16';
+  document.getElementById('customSpacing').value = 16;
+  document.getElementById('outsideCorners').value = 0;
+  document.getElementById('outsideCornerExtra').value = 2;
+  document.getElementById('insideCorners').value = 0;
+  document.getElementById('insideCornerExtra').value = 1;
+  document.getElementById('tIntersections').value = 0;
+  document.getElementById('tIntersectionExtra').value = 2;
+  document.getElementById('reinforcedEnds').value = 0;
+  document.getElementById('reinforcedEndExtra').value = 1;
+  ['cabinetLF','tvLF','handrailLF','bathLF','fireLF','otherLF'].forEach(id =>
+    document.getElementById(id).value = 0);
+  document.getElementById('wastePct').value = '10';
+  document.getElementById('customWaste').value = 10;
+  document.getElementById('plateBoardLen').value = '12';
+  document.getElementById('blockingBoardLen').value = '8';
+  document.getElementById('doorsList').innerHTML = '';
+  document.getElementById('windowsList').innerHTML = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('customSpacingDiv').style.display = 'none';
+  document.getElementById('customWasteDiv').style.display = 'none';
+  document.getElementById('customHeightDiv').style.display = 'none';
+}
+</script>
+</body>
+</html>
