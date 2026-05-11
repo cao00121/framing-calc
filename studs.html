@@ -288,12 +288,20 @@ body.mode-simple .advanced-only { display: none !important; }
         </div>
         <div>
           <label>Default wall height</label>
-          <select id="gWallHeight">
+          <select id="gWallHeight" onchange="toggleCustomHeight()">
             <option value="8" selected>8 ft</option>
             <option value="9">9 ft</option>
             <option value="10">10 ft</option>
             <option value="custom">Custom</option>
           </select>
+        </div>
+        <div id="gCustomHtBox" style="display:none">
+          <label>Custom height</label>
+          <div class="row" style="margin:0">
+            <div><input type="number" id="gCustomHtFt" value="8" min="0" inputmode="numeric" placeholder="ft"></div>
+            <div><input type="number" id="gCustomHtIn" value="0" min="0" max="11" inputmode="numeric" placeholder="in (opt.)"></div>
+          </div>
+          <div class="help">Feet + optional inches.</div>
         </div>
       </div>
       <div class="row">
@@ -428,12 +436,29 @@ function toggleCard(id) {
 /* ════════════════════════════════════════════════════
    WALL CREATION
    ════════════════════════════════════════════════════ */
+function toggleCustomHeight() {
+  const sel = document.getElementById('gWallHeight');
+  document.getElementById('gCustomHtBox').style.display = sel.value === 'custom' ? '' : 'none';
+}
+
+function getGlobalHeight() {
+  const sel = document.getElementById('gWallHeight').value;
+  if (sel === 'custom') {
+    return {
+      ft: parseFloat(document.getElementById('gCustomHtFt').value) || 0,
+      in: parseFloat(document.getElementById('gCustomHtIn').value) || 0,
+    };
+  }
+  return { ft: parseFloat(sel) || 8, in: 0 };
+}
+
 function defaultWallData() {
+  const gh = getGlobalHeight();
   return {
     name: '',
     lengthFt: 12, lengthIn: 0,
-    heightFt: parseFloat(document.getElementById('gWallHeight').value) || 8,
-    heightIn: 0,
+    heightFt: gh.ft,
+    heightIn: gh.in,
     wallType: 'load',                 // 'load' | 'non-load' | 'unsure'
     studSize: document.getElementById('gStudSize').value,
     studSpacing: document.getElementById('gStudSpacing').value,
@@ -553,8 +578,8 @@ function wallTemplate(id, d) {
         <input type="number" class="f-htFt" value="${d.heightFt}" min="0" inputmode="numeric">
       </div>
       <div>
-        <label>+ inches</label>
-        <input type="number" class="f-htIn" value="${d.heightIn}" min="0" max="11" inputmode="numeric">
+        <label>+ inches (optional)</label>
+        <input type="number" class="f-htIn" value="${d.heightIn}" min="0" max="11" inputmode="numeric" placeholder="0">
       </div>
     </div>
     <div class="row">
