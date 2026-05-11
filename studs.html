@@ -373,10 +373,16 @@ body.mode-simple .advanced-only { display: none !important; }
 
   <!-- ── MATERIAL PRICES ──────────────────────────── -->
   <div class="card collapsed" id="pricesCard">
-    <h2>💲 Material Prices (CAD)
+    <h2>💲 Material Prices (CAD) — optional
       <span class="toggle" onclick="toggleCard('pricesCard')">expand</span>
     </h2>
     <div class="body" style="display:none">
+      <div class="check-row" style="background:#fff3cd;padding:10px;border-radius:7px;margin-bottom:12px">
+        <input type="checkbox" id="includePrices">
+        <label for="includePrices" style="margin:0;font-size:14px;text-transform:none;letter-spacing:0;color:#856404">
+          <b>Include price estimate in results</b> — leave off to show quantities only.
+        </label>
+      </div>
       <div class="note">
         Starting values are typical Home Depot Canada (Nepean area) shelf prices — adjust to match what you actually see. Saved to your browser so you only enter them once.
         <br><b>Bulk rule:</b> 10% off any line item when quantity ≥ 100 pcs.
@@ -1335,10 +1341,15 @@ function renderResults(results) {
     </div>
   `).join('');
 
-  // ── Shopping list with prices ──
+  // ── Shopping list (with optional prices) ──
+  const includePrices = document.getElementById('includePrices').checked;
   const shoppingItems = [];
   let projectTotal = 0;
   const pushLine = (label, qty, priceKey) => {
+    if (!includePrices) {
+      shoppingItems.push(`${label}: <strong>${qty} pcs</strong>`);
+      return;
+    }
     const unit = unitPriceFor(priceKey);
     const cost = lineCost(qty, unit);
     projectTotal += cost;
@@ -1376,13 +1387,14 @@ function renderResults(results) {
     <div class="shopping">
       <h3>🛒 Project Shopping List</h3>
       <ul>${shoppingItems.map(i => `<li>${i}</li>`).join('')}</ul>
+      ${includePrices ? `
       <div style="border-top:2px solid rgba(0,0,0,0.15); margin-top:10px; padding-top:10px; display:flex; justify-content:space-between; font-size:18px; font-weight:800;">
         <span>Estimated total (CAD)</span>
         <span>${money(projectTotal)}</span>
       </div>
       <div style="font-size:11px; margin-top:6px; color:#5a3e0a;">
         Prices are your saved estimates. Bulk discount (10%) auto-applies when a single line ≥ 100 pcs. Tax not included.
-      </div>
+      </div>` : ''}
     </div>
     <div class="note">
       📝 This is a material estimate. Actual framing layout may change depending on opening positions, code, load requirements, sheathing layout, and site conditions.
@@ -1431,7 +1443,13 @@ function loadPrices() {
   try {
     const saved = JSON.parse(localStorage.getItem('framingPrices') || '{}');
     PRICE_IDS.forEach(id => { if (saved[id] != null) document.getElementById(id).value = saved[id]; });
+    const inc = localStorage.getItem('framingIncludePrices');
+    if (inc != null) document.getElementById('includePrices').checked = inc === '1';
   } catch (e) {}
+  // Persist toggle whenever it changes
+  document.getElementById('includePrices').addEventListener('change', e => {
+    localStorage.setItem('framingIncludePrices', e.target.checked ? '1' : '0');
+  });
 }
 function savePrices() {
   const data = {};
