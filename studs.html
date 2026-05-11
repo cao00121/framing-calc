@@ -245,6 +245,17 @@ body.mode-simple .advanced-only { display: none !important; }
 @media (max-width: 480px) {
   .row > div { min-width: 100%; }
 }
+
+/* Inline fraction inputs: __/__ */
+.frac-input {
+  display: flex; align-items: center; gap: 6px;
+}
+.frac-input input {
+  width: 100%; text-align: center; padding: 9px 4px;
+}
+.frac-input .slash {
+  font-weight: 800; color: #888; font-size: 18px; flex-shrink: 0;
+}
 </style>
 </head>
 <body class="mode-simple">
@@ -296,12 +307,19 @@ body.mode-simple .advanced-only { display: none !important; }
           </select>
         </div>
         <div id="gCustomHtBox" style="display:none">
-          <label>Custom height</label>
+          <label>Custom height (ft + in __/__)</label>
           <div class="row" style="margin:0">
             <div><input type="number" id="gCustomHtFt" value="8" min="0" inputmode="numeric" placeholder="ft"></div>
-            <div><input type="number" id="gCustomHtIn" value="0" min="0" max="11" inputmode="numeric" placeholder="in (opt.)"></div>
+            <div><input type="number" id="gCustomHtIn" value="0" min="0" max="11" inputmode="numeric" placeholder="in"></div>
+            <div>
+              <div class="frac-input">
+                <input type="number" id="gCustomHtFracN" min="0" inputmode="numeric" placeholder="0">
+                <span class="slash">/</span>
+                <input type="number" id="gCustomHtFracD" min="1" inputmode="numeric" placeholder="—">
+              </div>
+            </div>
           </div>
-          <div class="help">Feet + optional inches.</div>
+          <div class="help">Feet + optional whole inches + optional fraction (e.g. 8 ft 6 in 1/2).</div>
         </div>
       </div>
       <div class="row">
@@ -445,20 +463,31 @@ function getGlobalHeight() {
   const sel = document.getElementById('gWallHeight').value;
   if (sel === 'custom') {
     return {
-      ft: parseFloat(document.getElementById('gCustomHtFt').value) || 0,
-      in: parseFloat(document.getElementById('gCustomHtIn').value) || 0,
+      ft:   parseFloat(document.getElementById('gCustomHtFt').value)   || 0,
+      in:   parseFloat(document.getElementById('gCustomHtIn').value)   || 0,
+      fracN: parseFloat(document.getElementById('gCustomHtFracN').value) || 0,
+      fracD: parseFloat(document.getElementById('gCustomHtFracD').value) || 0,
     };
   }
-  return { ft: parseFloat(sel) || 8, in: 0 };
+  return { ft: parseFloat(sel) || 8, in: 0, fracN: 0, fracD: 0 };
+}
+
+// Combine ft + whole in + fraction → total inches
+function partsToInches(ft, inWhole, fracN, fracD) {
+  let total = (ft || 0) * 12 + (inWhole || 0);
+  if (fracN > 0 && fracD > 0) total += fracN / fracD;
+  return total;
 }
 
 function defaultWallData() {
   const gh = getGlobalHeight();
   return {
     name: '',
-    lengthFt: 12, lengthIn: 0,
+    lengthFt: 12, lengthIn: 0, lengthFracN: 0, lengthFracD: 0,
     heightFt: gh.ft,
     heightIn: gh.in,
+    heightFracN: gh.fracN,
+    heightFracD: gh.fracD,
     wallType: 'load',                 // 'load' | 'non-load' | 'unsure'
     studSize: document.getElementById('gStudSize').value,
     studSpacing: document.getElementById('gStudSpacing').value,
@@ -570,16 +599,34 @@ function wallTemplate(id, d) {
         <input type="number" class="f-lenFt" value="${d.lengthFt}" min="0" inputmode="numeric">
       </div>
       <div>
-        <label>+ inches</label>
-        <input type="number" class="f-lenIn" value="${d.lengthIn}" min="0" max="11" inputmode="numeric">
+        <label>+ in</label>
+        <input type="number" class="f-lenIn" value="${d.lengthIn}" min="0" max="11" inputmode="numeric" placeholder="0">
       </div>
+      <div>
+        <label>+ fraction</label>
+        <div class="frac-input">
+          <input type="number" class="f-lenFracN" value="${d.lengthFracN || ''}" min="0" inputmode="numeric" placeholder="0">
+          <span class="slash">/</span>
+          <input type="number" class="f-lenFracD" value="${d.lengthFracD || ''}" min="1" inputmode="numeric" placeholder="—">
+        </div>
+      </div>
+    </div>
+    <div class="row">
       <div>
         <label>Height (ft)</label>
         <input type="number" class="f-htFt" value="${d.heightFt}" min="0" inputmode="numeric">
       </div>
       <div>
-        <label>+ inches (optional)</label>
+        <label>+ in (optional)</label>
         <input type="number" class="f-htIn" value="${d.heightIn}" min="0" max="11" inputmode="numeric" placeholder="0">
+      </div>
+      <div>
+        <label>+ fraction (optional)</label>
+        <div class="frac-input">
+          <input type="number" class="f-htFracN" value="${d.heightFracN || ''}" min="0" inputmode="numeric" placeholder="0">
+          <span class="slash">/</span>
+          <input type="number" class="f-htFracD" value="${d.heightFracD || ''}" min="1" inputmode="numeric" placeholder="—">
+        </div>
       </div>
     </div>
     <div class="row">
@@ -905,11 +952,15 @@ function readWall(root) {
   const studSpacingSel = s(root, '.f-studSpacing');
   const studSpacing = studSpacingSel === 'custom' ? n(root, '.f-customSpacingVal') : parseFloat(studSpacingSel);
   return {
-    name:      root.querySelector('.f-name').value || 'Wall',
-    lengthFt:  n(root, '.f-lenFt'),
-    lengthIn:  n(root, '.f-lenIn'),
-    heightFt:  n(root, '.f-htFt'),
-    heightIn:  n(root, '.f-htIn'),
+    name:        root.querySelector('.f-name').value || 'Wall',
+    lengthFt:    n(root, '.f-lenFt'),
+    lengthIn:    n(root, '.f-lenIn'),
+    lengthFracN: n(root, '.f-lenFracN'),
+    lengthFracD: n(root, '.f-lenFracD'),
+    heightFt:    n(root, '.f-htFt'),
+    heightIn:    n(root, '.f-htIn'),
+    heightFracN: n(root, '.f-htFracN'),
+    heightFracD: n(root, '.f-htFracD'),
     wallType:  s(root, '.f-wallType'),
     studSize:  s(root, '.f-studSize'),
     studSpacing,
@@ -971,9 +1022,9 @@ function readWall(root) {
 
 /* ── Wall calculation ─────────────────────────── */
 function calculateWall(w) {
-  const lenIn = w.lengthFt * 12 + w.lengthIn;
+  const lenIn = partsToInches(w.lengthFt, w.lengthIn, w.lengthFracN, w.lengthFracD);
   const lenFt = lenIn / 12;
-  const htIn  = w.heightFt * 12 + w.heightIn;
+  const htIn  = partsToInches(w.heightFt, w.heightIn, w.heightFracN, w.heightFracD);
   const htFt  = htIn / 12;
   const spacing = w.studSpacing;
 
