@@ -371,6 +371,59 @@ body.mode-simple .advanced-only { display: none !important; }
     </div>
   </div>
 
+  <!-- ── MATERIAL PRICES ──────────────────────────── -->
+  <div class="card collapsed" id="pricesCard">
+    <h2>💲 Material Prices (CAD)
+      <span class="toggle" onclick="toggleCard('pricesCard')">expand</span>
+    </h2>
+    <div class="body" style="display:none">
+      <div class="note">
+        Starting values are typical Home Depot Canada (Nepean area) shelf prices — adjust to match what you actually see. Saved to your browser so you only enter them once.
+        <br><b>Bulk rule:</b> 10% off any line item when quantity ≥ 100 pcs.
+      </div>
+      <h3 style="font-size:13px;color:#2c3e50;margin:14px 0 8px;text-transform:uppercase;letter-spacing:0.5px">2x4 lumber ($/piece)</h3>
+      <div class="row">
+        <div><label>2x4 × 8 ft</label><input type="number" id="p-2x4-8"  value="4.50" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>2x4 × 10 ft</label><input type="number" id="p-2x4-10" value="6.50" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>2x4 × 12 ft</label><input type="number" id="p-2x4-12" value="8.50" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>2x4 × 16 ft</label><input type="number" id="p-2x4-16" value="12.00" min="0" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div>
+          <label>2x4 stud (92⅝")</label>
+          <input type="number" id="p-2x4-stud" value="4.45" min="0" step="0.01" inputmode="decimal">
+          <div class="help">Pre-cut stud used as the default for framing studs.</div>
+        </div>
+      </div>
+      <h3 style="font-size:13px;color:#2c3e50;margin:14px 0 8px;text-transform:uppercase;letter-spacing:0.5px">2x6 lumber ($/piece)</h3>
+      <div class="row">
+        <div><label>2x6 × 8 ft</label><input type="number" id="p-2x6-8"  value="8.50"  min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>2x6 × 10 ft</label><input type="number" id="p-2x6-10" value="10.50" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>2x6 × 12 ft</label><input type="number" id="p-2x6-12" value="13.00" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>2x6 × 16 ft</label><input type="number" id="p-2x6-16" value="18.00" min="0" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div>
+          <label>2x6 stud (92⅝")</label>
+          <input type="number" id="p-2x6-stud" value="8.20" min="0" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+      <h3 style="font-size:13px;color:#2c3e50;margin:14px 0 8px;text-transform:uppercase;letter-spacing:0.5px">Sheathing ($/sheet)</h3>
+      <div class="row">
+        <div><label>OSB 4×8 (7/16")</label><input type="number" id="p-OSB-4x8"  value="28.00" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>OSB 4×9</label><input type="number" id="p-OSB-4x9"  value="34.00" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>OSB 4×10</label><input type="number" id="p-OSB-4x10" value="40.00" min="0" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div><label>Plywood 4×8 (1/2")</label><input type="number" id="p-Plywood-4x8"  value="40.00" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>Plywood 4×9</label><input type="number" id="p-Plywood-4x9"  value="50.00" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label>Plywood 4×10</label><input type="number" id="p-Plywood-4x10" value="60.00" min="0" step="0.01" inputmode="decimal"></div>
+      </div>
+      <button class="btn btn-primary" onclick="savePrices()" style="margin-top:8px">Save Prices</button>
+      <button class="btn btn-reset" onclick="resetPrices()">Reset to defaults</button>
+    </div>
+  </div>
+
   <!-- ── WALLS ─────────────────────────────────────── -->
   <div id="wallsContainer"></div>
 
@@ -1282,19 +1335,31 @@ function renderResults(results) {
     </div>
   `).join('');
 
-  // ── Shopping list ──
+  // ── Shopping list with prices ──
   const shoppingItems = [];
+  let projectTotal = 0;
+  const pushLine = (label, qty, priceKey) => {
+    const unit = unitPriceFor(priceKey);
+    const cost = lineCost(qty, unit);
+    projectTotal += cost;
+    const bulk = qty >= 100 ? ' <em style="font-style:normal;color:#27ae60;font-size:12px">−10% bulk</em>' : '';
+    const priceLine = unit > 0
+      ? ` — ${qty} × ${money(unit)} = <strong>${money(cost)}</strong>${bulk}`
+      : ` — <em>set price in Material Prices</em>`;
+    shoppingItems.push(`${label}: <strong>${qty} pcs</strong>${priceLine}`);
+  };
+
   Object.entries(totals.byStudSize).forEach(([sz, ct]) => {
-    shoppingItems.push(`Framing studs (${sz}): <strong>${ct} pcs</strong>`);
+    pushLine(`Framing studs (${sz})`, ct, `${sz}-stud`);
   });
   Object.entries(totals.byPlate).forEach(([k, ct]) => {
-    shoppingItems.push(`Plate material (${k}): <strong>${ct} pcs</strong>`);
+    pushLine(`Plate material (${k})`, ct, k);
   });
   Object.entries(totals.byBlock).forEach(([k, ct]) => {
-    shoppingItems.push(`Blocking / backing (${k}): <strong>${ct} pcs</strong>`);
+    pushLine(`Blocking / backing (${k})`, ct, k);
   });
   Object.entries(totals.bySheet).forEach(([k, ct]) => {
-    shoppingItems.push(`Sheathing (${k} ft): <strong>${ct} sheets</strong>`);
+    pushLine(`Sheathing (${k} ft)`, ct, k);
   });
   shoppingItems.push('Header material: <strong>verify manually if load-bearing</strong>');
 
@@ -1311,6 +1376,13 @@ function renderResults(results) {
     <div class="shopping">
       <h3>🛒 Project Shopping List</h3>
       <ul>${shoppingItems.map(i => `<li>${i}</li>`).join('')}</ul>
+      <div style="border-top:2px solid rgba(0,0,0,0.15); margin-top:10px; padding-top:10px; display:flex; justify-content:space-between; font-size:18px; font-weight:800;">
+        <span>Estimated total (CAD)</span>
+        <span>${money(projectTotal)}</span>
+      </div>
+      <div style="font-size:11px; margin-top:6px; color:#5a3e0a;">
+        Prices are your saved estimates. Bulk discount (10%) auto-applies when a single line ≥ 100 pcs. Tax not included.
+      </div>
     </div>
     <div class="note">
       📝 This is a material estimate. Actual framing layout may change depending on opening positions, code, load requirements, sheathing layout, and site conditions.
@@ -1342,8 +1414,73 @@ function resetAll() {
   addWall();
 }
 
+/* ════════════════════════════════════════════════════
+   PRICES (localStorage)
+   ════════════════════════════════════════════════════ */
+const PRICE_IDS = [
+  'p-2x4-8','p-2x4-10','p-2x4-12','p-2x4-16','p-2x4-stud',
+  'p-2x6-8','p-2x6-10','p-2x6-12','p-2x6-16','p-2x6-stud',
+  'p-OSB-4x8','p-OSB-4x9','p-OSB-4x10',
+  'p-Plywood-4x8','p-Plywood-4x9','p-Plywood-4x10',
+];
+const PRICE_DEFAULTS = {};
+function snapshotDefaults() {
+  PRICE_IDS.forEach(id => PRICE_DEFAULTS[id] = document.getElementById(id).value);
+}
+function loadPrices() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('framingPrices') || '{}');
+    PRICE_IDS.forEach(id => { if (saved[id] != null) document.getElementById(id).value = saved[id]; });
+  } catch (e) {}
+}
+function savePrices() {
+  const data = {};
+  PRICE_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+  localStorage.setItem('framingPrices', JSON.stringify(data));
+  alert('Prices saved to this browser.');
+}
+function resetPrices() {
+  if (!confirm('Reset all prices to defaults?')) return;
+  PRICE_IDS.forEach(id => { document.getElementById(id).value = PRICE_DEFAULTS[id]; });
+  localStorage.removeItem('framingPrices');
+}
+function priceOf(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+// qty * unit, with 10% off when qty >= 100
+function lineCost(qty, unit) {
+  const gross = qty * unit;
+  return qty >= 100 ? gross * 0.9 : gross;
+}
+
+// Look up unit price for a key like '2x4-12' or 'OSB 4x8'
+function unitPriceFor(label) {
+  // Stud (full-height framing): 2x4 → 2x4-stud,  2x6 → 2x6-stud
+  if (label === '2x4-stud') return priceOf('p-2x4-stud');
+  if (label === '2x6-stud') return priceOf('p-2x6-stud');
+  // Plate/blocking lumber: '2x4x12' → look up 'p-2x4-12'
+  let m = label.match(/^(2x[46])x(\d+)$/);
+  if (m) {
+    const id = `p-${m[1]}-${m[2]}`;
+    if (PRICE_IDS.includes(id)) return priceOf(id);
+  }
+  // Sheathing: 'OSB 4x8' → 'p-OSB-4x8'
+  m = label.match(/^(OSB|Plywood)\s+(\d+x\d+)$/);
+  if (m) {
+    const id = `p-${m[1]}-${m[2]}`;
+    if (PRICE_IDS.includes(id)) return priceOf(id);
+  }
+  return 0;
+}
+
+function money(n) {
+  if (!isFinite(n)) return '—';
+  return '$' + n.toFixed(2);
+}
+
 /* ── Init ──────────────────────────────────────── */
 setMode('simple');
+snapshotDefaults();
+loadPrices();
 addWall();   // start with one wall
 
 /* Custom CSS hooks for simple-only blocking */
